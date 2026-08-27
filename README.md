@@ -48,11 +48,6 @@ npm run dist        # electron-builder 打包
 ```
 打包配置为 Windows NSIS 安装包,产物在 `dist/` 目录下。
 
-
-## License
-
-卡片笔记的 `package.json` 中声明为 MIT;管道小鸟的 `package.json` 未注明 license 字段。
-
 ## License
 
 MIT
