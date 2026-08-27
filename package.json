@@ -1,0 +1,39 @@
+{
+  "name": "guandao-xiaoniao",
+  "version": "1.0.0",
+  "description": "管道小鸟",
+  "main": "main.js",
+  "author": "niuzige",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.niuzige.guandaoxiaoniao",
+    "productName": "管道小鸟",
+    "files": [
+      "main.js",
+      "icon.ico",
+      "app/**/*"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "installerIcon": "icon.ico",
+      "uninstallerIcon": "icon.ico"
+    }
+  }
+}
