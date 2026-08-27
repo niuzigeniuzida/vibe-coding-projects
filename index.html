@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>卡片笔记</title>
+<style>
+  :root{
+    --paper: #E7E2D4;
+    --card: #FBF9F2;
+    --card-edge: #DAD4C0;
+    --ink: #262420;
+    --ink-soft: #6B6656;
+    --ink-faint: #9A9481;
+    --rail: #38402F;
+    --rail-ink: #E9E6D8;
+    --ring: #C9C2AA;
+    --focus: #38402F;
+  }
+  *{ box-sizing: border-box; }
+  html, body{
+    margin:0;
+    height: 100%;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    overflow: hidden;
+  }
+  .app{
+    display:flex;
+    height: 100vh;
+    width: 100%;
+  }
+
+  /* ---------- 左侧抽屉 ---------- */
+  .drawer{
+    width: 300px;
+    flex-shrink:0;
+    background: var(--rail);
+    color: var(--rail-ink);
+    display:flex;
+    flex-direction:column;
+    padding: 22px 16px;
+  }
+  .drawer-title{
+    font-family: Georgia, "Songti SC", serif;
+    font-size: 22px;
+    letter-spacing: 0.5px;
+    margin: 0 0 4px 2px;
+  }
+  .drawer-sub{
+    font-size: 12px;
+    color: #A9AE9A;
+    margin: 0 0 18px 2px;
+  }
+  .search-wrap{
+    position: relative;
+    margin-bottom: 14px;
+  }
+  .search-wrap input{
+    width: 100%;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.16);
+    color: var(--rail-ink);
+    border-radius: 8px;
+    padding: 9px 12px 9px 30px;
+    font-size: 13px;
+    outline: none;
+  }
+  .search-wrap input::placeholder{ color: #A9AE9A; }
+  .search-wrap input:focus{ border-color: rgba(255,255,255,0.4); }
+  .search-icon{
+    position:absolute; left:10px; top:50%; transform:translateY(-50%);
+    width:13px; height:13px; opacity:0.6;
+  }
+  .new-btn{
+    display:flex; align-items:center; justify-content:center; gap:6px;
+    background: #E7E2D4;
+    color: var(--rail);
+    border:none;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: 18px;
+  }
+  .new-btn:hover{ background:#fff; }
+  .new-btn:active{ transform: scale(0.98); }
+
+  .list{
+    overflow-y: auto;
+    flex:1;
+    margin: 0 -6px;
+    padding: 0 6px;
+  }
+  .list-item{
+    position: relative;
+    padding: 10px 10px 10px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-bottom: 3px;
+  }
+  .list-item::before{
+    content:"";
+    position:absolute; left:4px; top:12px; bottom:12px; width:3px;
+    border-radius: 2px;
+    background: var(--tag, #7C8B67);
+  }
+  .list-item:hover{ background: rgba(255,255,255,0.06); }
+  .list-item.active{ background: rgba(255,255,255,0.12); }
+  .li-title{
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #F1EEE1;
+    white-space: nowrap; overflow:hidden; text-overflow:ellipsis;
+    margin-bottom: 2px;
+  }
+  .li-title:empty::before{ content: "无标题"; color:#A9AE9A; font-weight:400; }
+  .li-preview{
+    font-size: 12px;
+    color: #A9AE9A;
+    white-space: nowrap; overflow:hidden; text-overflow:ellipsis;
+    margin-bottom: 4px;
+  }
+  .li-date{
+    font-size: 10.5px;
+    color: #82876F;
+    font-variant-numeric: tabular-nums;
+  }
+  .empty-list{
+    color:#82876F; font-size:12.5px; text-align:center; margin-top: 40px; line-height:1.7;
+  }
+
+  /* ---------- 右侧卡片区 ---------- */
+  .main{
+    flex:1;
+    background:
+      repeating-linear-gradient(
+        180deg,
+        transparent, transparent 27px,
+        var(--ring) 27px, var(--ring) 28px
+      ),
+      var(--paper);
+    padding: 30px 40px;
+    display:flex;
+    flex-direction: column;
+  }
+  .card{
+    background: var(--card);
+    border: 1px solid var(--card-edge);
+    border-radius: 3px;
+    box-shadow: 0 1px 0 var(--card-edge);
+    padding: 26px 32px 30px;
+    flex: 1;
+    display:flex;
+    flex-direction: column;
+    position: relative;
+  }
+  .card::before{
+    content:"";
+    position:absolute; left:0; top:0; bottom:0; width:5px;
+    background: var(--tag, #7C8B67);
+    border-radius: 3px 0 0 3px;
+  }
+  .card-top{
+    display:flex; align-items:flex-start; justify-content:space-between; gap:16px;
+    margin-bottom: 4px;
+  }
+  .title-input{
+    flex:1;
+    border:none; outline:none; background:transparent;
+    font-family: Georgia, "Songti SC", serif;
+    font-size: 24px;
+    color: var(--ink);
+    padding: 2px 0;
+  }
+  .title-input::placeholder{ color: var(--ink-faint); }
+  .card-actions{ display:flex; align-items:center; gap:10px; padding-top: 6px; }
+  .swatch{
+    width:16px; height:16px; border-radius:50%;
+    border: 2px solid transparent;
+    cursor:pointer;
+    padding:0;
+  }
+  .swatch.selected{ border-color: var(--ink); }
+  .del-btn{
+    border:none; background:none; cursor:pointer;
+    color: var(--ink-faint);
+    padding: 4px;
+    border-radius: 6px;
+    display:flex; align-items:center;
+  }
+  .del-btn:hover{ color:#A5432B; background: rgba(165,67,43,0.08); }
+  .meta-line{
+    font-size: 11px;
+    color: var(--ink-faint);
+    font-variant-numeric: tabular-nums;
+    margin: 2px 0 16px;
+    letter-spacing: 0.2px;
+  }
+  .toolbar{
+    display:flex; align-items:center; gap:2px; flex-wrap:wrap;
+    padding: 8px 0 10px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--card-edge);
+  }
+  .tb-btn{
+    width: 28px; height: 28px;
+    display:flex; align-items:center; justify-content:center;
+    border:none; background:transparent; border-radius:6px;
+    color: var(--ink-soft);
+    cursor:pointer;
+  }
+  .tb-btn:hover{ background: var(--paper); color: var(--ink); }
+  .tb-btn.active{ background: var(--ring); color: var(--ink); }
+  .tb-sep{
+    width:1px; height:18px; background: var(--card-edge); margin: 0 6px;
+  }
+  .tb-size{
+    height: 28px;
+    border: 1px solid var(--card-edge);
+    background: transparent;
+    border-radius: 6px;
+    font-size: 12px;
+    color: var(--ink-soft);
+    padding: 0 4px;
+    cursor:pointer;
+  }
+  .tb-color-wrap{
+    position: relative;
+    width: 28px; height: 28px;
+    display:flex; align-items:center; justify-content:center;
+    border-radius:6px;
+    cursor:pointer;
+    border:none; background:transparent;
+    color: var(--ink-soft);
+  }
+  .tb-color-wrap:hover{ background: var(--paper); color: var(--ink); }
+  .tb-color-bar{
+    position:absolute; left:6px; right:6px; bottom:5px; height:3px; border-radius:1px;
+    background: var(--color-current, #262420);
+    pointer-events:none;
+  }
+  .color-pop{
+    position:absolute; z-index: 20; top: 32px; left: 0;
+    background: var(--card);
+    border: 1px solid var(--card-edge);
+    border-radius: 8px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.14);
+    padding: 8px;
+    display: grid;
+    grid-template-columns: repeat(5, 20px);
+    gap: 6px;
+  }
+  .color-pop.hidden{ display:none; }
+  .color-pop button{
+    width:20px; height:20px; border-radius:50%;
+    border: 1px solid rgba(0,0,0,0.08);
+    cursor:pointer; padding:0;
+  }
+  .color-pop button:hover{ transform: scale(1.12); }
+  .color-pop button.selected{ box-shadow: 0 0 0 2px var(--card), 0 0 0 3.5px var(--ink); }
+  .content-area{
+    flex:1;
+    outline: none;
+    overflow-y: auto;
+    background:transparent;
+    font-size: 15px;
+    line-height: 28px;
+    color: var(--ink);
+    font-family: inherit;
+  }
+  .content-area:empty::before{
+    content: attr(data-placeholder);
+    color: var(--ink-faint);
+  }
+
+  /* ---------- 空状态 ---------- */
+  .empty-state{
+    flex:1;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center;
+    color: var(--ink-soft);
+  }
+  .empty-state h2{
+    font-family: Georgia, "Songti SC", serif;
+    font-weight: 400;
+    font-size: 20px;
+    color: var(--ink);
+    margin: 14px 0 6px;
+  }
+  .empty-state p{ font-size: 13px; margin: 0 0 18px; color: var(--ink-faint); }
+  .empty-state button{
+    background: var(--rail);
+    color: var(--rail-ink);
+    border:none;
+    border-radius: 8px;
+    padding: 9px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor:pointer;
+  }
+  .empty-state button:hover{ opacity:0.9; }
+
+  ::-webkit-scrollbar{ width:8px; }
+  ::-webkit-scrollbar-thumb{ background: rgba(255,255,255,0.15); border-radius: 4px; }
+  .main ::-webkit-scrollbar-thumb{ background: var(--ring); }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="drawer">
+    <p class="drawer-title">卡片笔记</p>
+    <p class="drawer-sub" id="countLabel">加载中…</p>
+    <div class="search-wrap">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="searchInput" type="text" placeholder="搜索笔记…">
+    </div>
+    <button class="new-btn" id="newBtn">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      新建卡片
+    </button>
+    <div class="list" id="listEl"></div>
+  </div>
+
+  <div class="main" id="mainEl"></div>
+</div>
+
+<script>
+const TAGS = ["#7C8B67","#4C6B87","#7A5570","#B98A2E","#A5432B"];
+let notes = [];
+let selectedId = null;
+let saveTimer = null;
+
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+function blankNote(){
+  const now = Date.now();
+  return { id: uid(), title: "", content: "", color: TAGS[0], createdAt: now, updatedAt: now };
+}
+
+const STORAGE_KEY = 'all-notes';
+const hasCloudStorage = (typeof window.storage !== 'undefined') && !!window.storage;
+
+async function storeGet(key){
+  if(hasCloudStorage){
+    try{ return await window.storage.get(key); }
+    catch(e){ return null; }
+  }
+  const v = localStorage.getItem(key);
+  return v !== null ? { value: v } : null;
+}
+
+async function storeSet(key, value){
+  if(hasCloudStorage){
+    try{ return await window.storage.set(key, value); }
+    catch(e){ console.error('云端保存失败，改用本地存储', e); }
+  }
+  try{ localStorage.setItem(key, value); }
+  catch(e){ console.error('本地保存失败', e); }
+}
+
+async function loadNotes(){
+  try{
+    const res = await storeGet(STORAGE_KEY);
+    notes = res && res.value ? JSON.parse(res.value) : [];
+  }catch(e){
+    notes = [];
+  }
+  notes.sort((a,b)=>b.updatedAt - a.updatedAt);
+  if(notes.length){ selectedId = notes[0].id; }
+  renderAll();
+}
+
+function persist(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(()=>{
+    storeSet(STORAGE_KEY, JSON.stringify(notes));
+  }, 300);
+}
+
+function fmtDate(ts){
+  const d = new Date(ts);
+  const now = new Date();
+  const sameDay = d.toDateString() === now.toDateString();
+  const time = d.toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit', hour12:false});
+  if(sameDay) return "今天 " + time;
+  return (d.getMonth()+1) + "月" + d.getDate() + "日 " + time;
+}
+
+function currentNote(){
+  return notes.find(n => n.id === selectedId) || null;
+}
+
+function renderAll(){
+  renderList();
+  renderMain();
+  document.getElementById('countLabel').textContent = notes.length + " 张卡片" + (hasCloudStorage ? "" : " · 本地保存");
+}
+
+function renderList(){
+  const listEl = document.getElementById('listEl');
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  const filtered = notes.filter(n =>
+    !q || n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q)
+  );
+
+  if(!notes.length){
+    listEl.innerHTML = '<div class="empty-list">抽屉是空的<br>新建一张卡片开始吧</div>';
+    return;
+  }
+  if(!filtered.length){
+    listEl.innerHTML = '<div class="empty-list">没有匹配的笔记</div>';
+    return;
+  }
+
+  listEl.innerHTML = filtered.map(n => {
+    const preview = plainText(n.content).slice(0,40) || '空白内容';
+    const titleSafe = escapeHtml(n.title);
+    return `<div class="list-item ${n.id===selectedId?'active':''}" style="--tag:${n.color}" data-id="${n.id}">
+      <div class="li-title">${titleSafe}</div>
+      <div class="li-preview">${escapeHtml(preview)}</div>
+      <div class="li-date">${fmtDate(n.updatedAt)}</div>
+    </div>`;
+  }).join('');
+
+  listEl.querySelectorAll('.list-item').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      selectedId = el.getAttribute('data-id');
+      renderAll();
+    });
+  });
+}
+
+function plainText(html){
+  const d = document.createElement('div');
+  d.innerHTML = html;
+  return (d.textContent || '').trim().replace(/\s+/g,' ');
+}
+
+function escapeHtml(s){
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function renderMain(){
+  const mainEl = document.getElementById('mainEl');
+  const note = currentNote();
+
+  if(!note){
+    mainEl.innerHTML = `
+      <div class="empty-state">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" opacity="0.5">
+          <rect x="4" y="3" width="16" height="18" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="12" y2="16"/>
+        </svg>
+        <h2>还没有选中的卡片</h2>
+        <p>新建一张卡片，写下第一条笔记</p>
+        <button id="emptyNewBtn">新建卡片</button>
+      </div>`;
+    document.getElementById('emptyNewBtn').addEventListener('click', createNote);
+    return;
+  }
+
+  mainEl.innerHTML = `
+    <div class="card" style="--tag:${note.color}">
+      <div class="card-top">
+        <input class="title-input" id="titleInput" placeholder="无标题" value="${escapeHtml(note.title)}">
+        <div class="card-actions">
+          ${TAGS.map(c => `<button class="swatch ${c===note.color?'selected':''}" style="background:${c}" data-color="${c}"></button>`).join('')}
+          <button class="del-btn" id="delBtn" aria-label="删除笔记">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="meta-line">编辑于 ${fmtDate(note.updatedAt)}</div>
+      <div class="toolbar">
+        <button class="tb-btn" data-cmd="bold" title="加粗" aria-label="加粗"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h8a4 4 0 0 1 0 8H6z"/><path d="M6 12h9a4 4 0 0 1 0 8H6z"/></svg></button>
+        <button class="tb-btn" data-cmd="italic" title="斜体" aria-label="斜体"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="10" y1="4" x2="18" y2="4"/><line x1="6" y1="20" x2="14" y2="20"/><line x1="14" y1="4" x2="10" y2="20"/></svg></button>
+        <button class="tb-btn" data-cmd="underline" title="下划线" aria-label="下划线"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 3v8a6 6 0 0 0 12 0V3"/><line x1="4" y1="21" x2="20" y2="21"/></svg></button>
+        <button class="tb-btn" data-cmd="strikeThrough" title="删除线" aria-label="删除线"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="12" x2="20" y2="12"/><path d="M8 19c1.5 1 3 1.3 5 1.1 3-.3 4.5-1.8 4.5-3.6 0-1.2-.7-2.1-1.9-2.7"/><path d="M15.5 8.3C15.1 6.4 13.4 5 11 5 8.6 5 7 6.3 7 8c0 1.1.6 1.9 1.6 2.5"/></svg></button>
+        <span class="tb-sep"></span>
+        <select class="tb-size" id="sizeSelect" title="字号">
+          <option value="2">小</option>
+          <option value="3" selected>正常</option>
+          <option value="4">大</option>
+          <option value="5">较大</option>
+        </select>
+        <span class="tb-sep"></span>
+        <label class="tb-color-wrap" id="colorTrigger" title="字体颜色" aria-label="字体颜色">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4-1 10-10-3-3L5 16z"/><path d="M14 6l3 3"/></svg>
+          <span class="tb-color-bar" id="colorBar"></span>
+          <div class="color-pop hidden" id="colorPop">
+            ${["#262420","#6B6656","#A5432B","#B98A2E","#7C8B67","#4C6B87","#7A5570","#8C4B9B","#2B6CA3","#B5541F"].map(c=>`<button data-color="${c}" style="background:${c}"></button>`).join('')}
+          </div>
+        </label>
+      </div>
+      <div class="content-area" id="contentArea" contenteditable="true" data-placeholder="开始写点什么…">${note.content}</div>
+    </div>`;
+
+  document.getElementById('titleInput').addEventListener('input', e=>{
+    note.title = e.target.value;
+    note.updatedAt = Date.now();
+    persist();
+    renderList();
+  });
+  const contentArea = document.getElementById('contentArea');
+  contentArea.addEventListener('input', ()=>{
+    note.content = contentArea.innerHTML;
+    note.updatedAt = Date.now();
+    persist();
+    renderList();
+  });
+
+  try{ document.execCommand('styleWithCSS', false, true); }catch(e){}
+
+  mainEl.querySelectorAll('.tb-btn[data-cmd]').forEach(btn=>{
+    btn.addEventListener('mousedown', e=>{
+      e.preventDefault();
+      contentArea.focus();
+      document.execCommand(btn.getAttribute('data-cmd'), false, null);
+      note.content = contentArea.innerHTML;
+      note.updatedAt = Date.now();
+      persist();
+      updateToolbarState();
+    });
+  });
+
+  document.getElementById('sizeSelect').addEventListener('change', e=>{
+    contentArea.focus();
+    document.execCommand('fontSize', false, e.target.value);
+    note.content = contentArea.innerHTML;
+    note.updatedAt = Date.now();
+    persist();
+  });
+
+  const colorTrigger = document.getElementById('colorTrigger');
+  const colorPop = document.getElementById('colorPop');
+
+  colorTrigger.addEventListener('mousedown', e=>{
+    if(e.target.closest('#colorPop')) return;
+    e.preventDefault();
+    colorPop.classList.toggle('hidden');
+  });
+
+  colorPop.querySelectorAll('button[data-color]').forEach(btn=>{
+    btn.addEventListener('mousedown', e=>{
+      e.preventDefault();
+      const color = btn.getAttribute('data-color');
+      contentArea.focus();
+      document.execCommand('foreColor', false, color);
+      document.getElementById('colorBar').style.setProperty('--color-current', color);
+      colorPop.querySelectorAll('button').forEach(b=>b.classList.toggle('selected', b===btn));
+      colorPop.classList.add('hidden');
+      note.content = contentArea.innerHTML;
+      note.updatedAt = Date.now();
+      persist();
+    });
+  });
+
+  function updateToolbarState(){
+    mainEl.querySelectorAll('.tb-btn[data-cmd]').forEach(btn=>{
+      const cmd = btn.getAttribute('data-cmd');
+      let active = false;
+      try{ active = document.queryCommandState(cmd); }catch(e){}
+      btn.classList.toggle('active', active);
+    });
+  }
+  document.addEventListener('selectionchange', ()=>{
+    if(document.activeElement === contentArea) updateToolbarState();
+  });
+
+  mainEl.querySelectorAll('.swatch').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      note.color = btn.getAttribute('data-color');
+      note.updatedAt = Date.now();
+      persist();
+      renderAll();
+    });
+  });
+  document.getElementById('delBtn').addEventListener('click', ()=>{
+    notes = notes.filter(n => n.id !== note.id);
+    selectedId = notes.length ? notes[0].id : null;
+    persist();
+    renderAll();
+  });
+}
+
+function createNote(){
+  const n = blankNote();
+  notes.unshift(n);
+  selectedId = n.id;
+  persist();
+  renderAll();
+  setTimeout(()=>{
+    const el = document.getElementById('titleInput');
+    if(el) el.focus();
+  }, 30);
+}
+
+document.getElementById('newBtn').addEventListener('click', createNote);
+document.getElementById('searchInput').addEventListener('input', renderList);
+document.addEventListener('mousedown', e=>{
+  const openPop = document.querySelector('.color-pop:not(.hidden)');
+  if(openPop && !e.target.closest('.tb-color-wrap')) openPop.classList.add('hidden');
+});
+
+loadNotes();
+</script>
+</body>
+</html>
